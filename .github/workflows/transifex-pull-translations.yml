@@ -31,6 +31,7 @@ jobs:
       - name: Create Pull Request
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -53,7 +54,7 @@ jobs:
 
           If you want to help translate into your language, please join [our transifex project](https://explore.transifex.com/violentmonkey/violentmonkey-nex/)." \
               --head i18n-patch \
-              --base master
+              --base "$DEFAULT_BRANCH"
           else
             echo "Existing PR found. Branch has been force-pushed and PR is automatically updated."
           fi

@@ -3,7 +3,7 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [master]
+    branches: [main, master]
     tags-ignore:
       - 'v*' # version-tagged commits are releases which have their own workflow
     paths-ignore:
@@ -12,7 +12,10 @@ on:
       - LICENSE
       - README.md
   pull_request:
-    branches: [master]
+    branches: [main, master]
+
+permissions:
+  contents: read
 
 jobs:
   ci:
@@ -20,14 +23,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
+          persist-credentials: false
           fetch-depth: 100 # for revision index in version and the `has-changed-path` action
           fetch-tags: true
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version-file: 'package.json'
 
@@ -37,37 +41,19 @@ jobs:
         run: |
           pnpm exec run-p ci build
           pnpm build:mv3
-        env:
-          SYNC_DROPBOX_CLIENT_ID: ${{ secrets.SYNC_DROPBOX_CLIENT_ID }}
-          SYNC_GOOGLE_DESKTOP_ID: ${{ secrets.SYNC_GOOGLE_DESKTOP_ID }}
-          SYNC_GOOGLE_DESKTOP_SECRET: ${{ secrets.SYNC_GOOGLE_DESKTOP_SECRET }}
-          SYNC_ONEDRIVE_CLIENT_ID: ${{ secrets.SYNC_ONEDRIVE_CLIENT_ID }}
-
       - name: Get version and SHA
         run: node scripts/action-helper.js ci
       - name: Upload MV2 zip
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         continue-on-error: true
         with:
           name: 'Violentmonkey-test-webext-${{ env.GIT_DESCRIBE }}'
           path: 'dist/*'
           if-no-files-found: error
       - name: Upload MV3 zip
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         continue-on-error: true
         with:
           name: 'Violentmonkey-test-mv3-${{ env.GIT_DESCRIBE }}'
           path: 'dist-mv3/*'
           if-no-files-found: error
-
-      - name: Upload to Transifex - check src
-        if: github.event_name == 'push' || github.event.pull_request.merged == true
-        uses: marceloprado/has-changed-path@v1.0.1
-        id: changed-path-src
-        with:
-          paths: src
-      - name: Upload to Transifex
-        if: steps.changed-path-src.outputs.changed == 'true'
-        run: node scripts/transifex.mjs update
-        env:
-          TRANSIFEX_TOKEN: ${{ secrets.TRANSIFEX_TOKEN }}
